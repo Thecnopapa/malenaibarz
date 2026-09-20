@@ -18,8 +18,9 @@
                     <div class="dashboard-page">
                         <div class="page-info">
                             <p><b>{{ page.name }}</b> <a href="/page/{{ page.path }}" target="_blank">(/{{ page.path }})</a></p>
+                            <button class="edit-page" onclick='window.open("/edit/{{ page.path }}", target="_blank")'>Edit</button>
                         </div>
-                        <iframe class="page-preview" src="/page/{{page.path}}"></iframe>
+                        <iframe class="page-preview" src="/preview/{{page.path}}"></iframe>
                         
                     </div>
                 {% endfor %}

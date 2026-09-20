@@ -98,6 +98,51 @@ def return_static(file):
 
 
     
+class Layout(object):
+    def __init__(self, element):
+        self.element = element
+        self.elements = {}
+        self.structure = {}
+        self.counter = 0
+        self.element.counter = f"e{self.counter}"
+        self.structure = {self.element.counter:{}}
+        self._tree = [self.element.counter]
+
+        print("Building layout...")
+        self.build()
+        print(json.dumps(self.structure, indent=4))
+
+    def json(self, indent=None):
+        return json.dumps(self.structure, indent=indent)
+
+    def build(self, element=None):
+        
+        if element is None:
+            element = self.element
+
+        for child in element.elements:
+            self.counter += 1
+            e = Element(child)
+            e.counter = f"e{self.counter}"
+            self.elements[e.counter] = e
+            element.children.append(e)
+            e.parent = element
+
+            target = self.structure
+            for k in self._tree:
+                target = target[k]
+            target[e.counter] = {}
+            self._tree.append(e.counter)
+            self.build(element=e)
+            self._tree = self._tree[:-1]
+
+        return self
+
+    def render(self, headers=False, preview=False, depth=0):
+        return self.element.render(headers=headers, preview=preview, depth=depth)
+
+
+
 
 
 class Element(object):
@@ -106,27 +151,46 @@ class Element(object):
         self.content = element.get("content", "")
         self.id = element.get("id", "")
         self.classlist = element.get("classlist", "")
-        self.style = element.get("style", "")
+        self.style = element.get("style", {})
         self.elements = element.get("elements", [])
         self.imports = element.get("imports", [])
 
-    def render(self, headers=False, preview=False, depth=0):
+        self.children = []
+        self.parent = None
+        self.counter = None
+
+
+    def get_tree(self, tree=None):
+        if tree is None:
+            tree = []
+        tree.append(self.id)
+        self.parent.get_tree(tree=tree)
+        return tree
+
+    def process_style(self):
+        style = ""
+        for k, v in self.style.items():
+            style+= f"{k}:{v};"
+        return style
+
+    def render(self, headers=False, preview=False, depth=0, counter=None):
         html=""
         indent=" "*depth
         if headers:
             if preview:
-                html += indent+'<meta name="viewport" content="width=20 height=10, initial-scale=1.0"/>\n'
+                html += indent+'<meta name="viewport" content="width=700 height=300 , initial-scale=0.01"/>\n'
         for i in self.imports:
             if i.endswith(".css"):
                 html += indent + f"<link href='/static/{i}' rel='stylesheet'>\n"
             elif i.endswith(".js"):
                 html += indent+f'<script defer type="text/javascript" src="/static/{i}"></script>\n'
 
-        html += indent + f"<{self.type} id='{self.id}' class='{self.classlist}' style='{self.style}'>\n"
+        html += indent + f"<{self.type} id='{self.id}' counter='{self.counter}' class='{self.classlist}' style='{self.process_style()}'>\n"
         html += indent + self.content + "\n"
-        for child in self.elements:
-            html += Element(child).render(depth=depth+1)
+        for child in self.children:
+            html += child.render(depth=depth+1, preview=preview)
         html += indent + f"</{self.type}>\n"
+
         return html
 
 class Page(object):
@@ -134,11 +198,14 @@ class Page(object):
         self.data = json.load(open(os.path.join(data_folder, page_id+".page.json")))
         self.id = page_id
 
+        self.layout = Layout(Element(self.data))
+
     def __getattr__(self, attr):
         return self.data.get(attr, None)
 
     def render(self, headers=True, preview=False):
-        return Element(self.data).render(preview=preview, headers=headers)
+
+        return self.layout.render(preview=preview, headers=headers)
 
 
 
@@ -153,8 +220,16 @@ def parse_pages():
 
 
 @app.get("/page/<page>")
-def preview_page(page):
+def view_page(page):
     return Page(page).render()
+
+@app.get("/preview/<page>")
+def preview_page(page):
+    return Page(page).render(preview=True)
+
+@app.get("/edit/<page>")
+def edit_page(page):
+    return render_template("editor.html", page=Page(page))
 
 
 @app.get("/")

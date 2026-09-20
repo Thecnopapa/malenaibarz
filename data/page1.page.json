@@ -11,7 +11,7 @@
     "elements": [
         {
             "type":"div",
-            "class": "test-div",
+            "class": "test-div aaa",
             "content": "Hello",
             "elements": [
                 {
@@ -19,6 +19,14 @@
                     "content": "World"
                 }
             ]
+        },
+        {
+            "type": "div",
+            "class": "test-div2 aaa",
+            "content": "oooo",
+            "style": {
+                "background-color": "cyan"
+            }
         }
     ]
 }

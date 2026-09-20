@@ -1,0 +1,29 @@
+<script defer type="text/javascript" src="/static/editor.js"></script>
+<link href='/static/editor.css' rel='stylesheet'>
+
+
+<html>
+    <body>
+        <div id="editor-menu">
+            <h3>Menu</h3>
+            <button class=editor-menu-button>Visual</button>
+            <button class=editor-menu-button>Code</button>
+            <div id="editor-tree">
+            </div>
+            
+        </div>
+        <div id="editor-page-visual">
+            <h3>Visual Editor</h3>
+            <script>
+                let layout = {{ page.layout.json() |safe }}
+            </script>
+            <div id=editor-frame>
+                {{ page.render() |safe }}
+            </div>
+        </div>
+
+
+
+    </body>
+
+</html>
