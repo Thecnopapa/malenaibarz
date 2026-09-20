@@ -1,0 +1,24 @@
+{
+    "name":"Page 1",
+    "path":"page1",
+    "template": "",
+    "block": "content",
+    "type": "body",
+    "imports": [
+        "global.css",
+        "global.js"
+    ],
+    "elements": [
+        {
+            "type":"div",
+            "class": "test-div",
+            "content": "Hello",
+            "elements": [
+                {
+                    "type": "b",
+                    "content": "World"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,32 @@
+<script defer type="text/javascript" src="/static/dashboard.js"></script>
+<link href='/static/dashboard.css' rel='stylesheet'>
+
+
+<html>
+    <body>
+        <div id="dashboard-menu">
+            <h3>Menu</h3>
+            <button class=dashboard-menu-button>Setup</button>
+            <button class=dashboard-menu-button>Pages</button>
+            
+        </div>
+
+        <div id="dashboard-pages">
+            <h3>Pages</h3>
+            <div id=page-list>
+                {% for page in pages %}
+                    <div class="dashboard-page">
+                        <div class="page-info">
+                            <p><b>{{ page.name }}</b> <a href="/page/{{ page.path }}" target="_blank">(/{{ page.path }})</a></p>
+                        </div>
+                        <iframe class="page-preview" src="/page/{{page.path}}"></iframe>
+                        
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+
+
+    </body>
+</html>
