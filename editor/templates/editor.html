@@ -18,7 +18,7 @@
                 let layout = {{ page.layout.json() |safe }}
             </script>
             <div id=editor-frame>
-                {{ page.render() |safe }}
+                {{ page.render(editor=True) |safe }}
             </div>
         </div>
 

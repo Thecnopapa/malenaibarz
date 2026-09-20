@@ -138,8 +138,8 @@ class Layout(object):
 
         return self
 
-    def render(self, headers=False, preview=False, depth=0):
-        return self.element.render(headers=headers, preview=preview, depth=depth)
+    def render(self, headers=False, preview=False, depth=0, editor=False):
+        return self.element.render(headers=headers, preview=preview, depth=depth, editor=editor)
 
 
 
@@ -173,7 +173,7 @@ class Element(object):
             style+= f"{k}:{v};"
         return style
 
-    def render(self, headers=False, preview=False, depth=0, counter=None):
+    def render(self, headers=False, preview=False, depth=0, counter=None, editor=False):
         html=""
         indent=" "*depth
         if headers:
@@ -185,10 +185,14 @@ class Element(object):
             elif i.endswith(".js"):
                 html += indent+f'<script defer type="text/javascript" src="/static/{i}"></script>\n'
 
-        html += indent + f"<{self.type} id='{self.id}' counter='{self.counter}' class='{self.classlist}' style='{self.process_style()}'>\n"
+        html += indent + f"<{self.type} id='{self.id}' counter='{self.counter}' class='{self.classlist}' style='{self.process_style()}'"
+        if editor and self.type != "body":
+            #html += " draggable='true'"
+            pass
+        html += ">\n"
         html += indent + self.content + "\n"
         for child in self.children:
-            html += child.render(depth=depth+1, preview=preview)
+            html += child.render(depth=depth+1, preview=preview, editor=editor)
         html += indent + f"</{self.type}>\n"
 
         return html
@@ -203,9 +207,9 @@ class Page(object):
     def __getattr__(self, attr):
         return self.data.get(attr, None)
 
-    def render(self, headers=True, preview=False):
+    def render(self, headers=True, preview=False, editor=False):
 
-        return self.layout.render(preview=preview, headers=headers)
+        return self.layout.render(preview=preview, headers=headers, editor=editor)
 
 
 
