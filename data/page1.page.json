@@ -8,6 +8,10 @@
         "global.css",
         "global.js"
     ],
+    "style": {
+        "display": "flex",
+        "flex-direction": "row"
+    },
     "elements": [
         {
             "type":"div",

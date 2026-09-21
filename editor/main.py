@@ -184,16 +184,18 @@ class Element(object):
                 html += indent + f"<link href='/static/{i}' rel='stylesheet'>\n"
             elif i.endswith(".js"):
                 html += indent+f'<script defer type="text/javascript" src="/static/{i}"></script>\n'
+        t = self.type
+        if editor and self.type == "body":
+            t = "div"
 
-        html += indent + f"<{self.type} id='{self.id}' counter='{self.counter}' class='{self.classlist}' style='{self.process_style()}'"
-        if editor and self.type != "body":
-            #html += " draggable='true'"
-            pass
+
+        html += indent + f"<{t} id='{self.id}' counter='{self.counter}' class='{self.classlist} {self.counter}' style='{self.process_style()}'"
+        
         html += ">\n"
         html += indent + self.content + "\n"
         for child in self.children:
             html += child.render(depth=depth+1, preview=preview, editor=editor)
-        html += indent + f"</{self.type}>\n"
+        html += indent + f"</{t}>\n"
 
         return html
 

@@ -1,16 +1,15 @@
 
-let DRAGGING = false;
 let dragSibling = undefined;
 let dragParent = undefined;
 let dragTarget = undefined;
+let dragClone = undefined;
+let dragOk = false;
 let editorFrame = document.querySelector("#editor-frame");
 console.log(editorFrame);
 
 
 editorFrame.addEventListener('click', (e) => {
-    if (DRAGGING){
-        return
-    }
+
     e.preventDefault();
     e.stopPropagation();
     selectClosestElement(e);
@@ -30,8 +29,6 @@ function showContext(event){
 }
 
 
-
-
 editorFrame.addEventListener('dragstart', (e) => {
     console.log("Dragging:", e.target)
     e.stopPropagation();
@@ -43,20 +40,93 @@ editorFrame.addEventListener('dragstart', (e) => {
         dragParent = target.parentElement;
     }
 
+    let clone = target.cloneNode(deep=true);
+    dragClone = clone;
+    dragTarget = target
 
-    let clone = target.cloneNode(deep=true)
-    target.remove()
+    clone.classList.add("drag-clone");
+    target.classList.add("dragged");
 
-    clone.addEventListener("drop", (e) => {
-    })
-    console.log(clone)
-    DRAGGING = clone
+    
 }, {"passive":false, "capture":true});
 
 
+editorFrame.addEventListener('dragend', (e) => {
+    if (dragTarget === undefined){return}
+    if (dragOk){
+        dragTarget.remove();
+        dragClone.classList.remove("drag-clone")
+        
+    }
+
+    dragSibling = undefined;
+    dragParent = undefined;
+    dragTarget = undefined;
+    dragClone = undefined;
+    dragOk = false;
+    
+
+}, {"passive":false, "capture":true});
+
 editorFrame.addEventListener('dragover', (e) => {
-    console.log("Dragging over:", e.target);
-    //console.log(e.target);
+    if (dragTarget === undefined){return}
+    //console.log("Dragging over:", e.target, e);
+    //console.log(e.target, e.toElement, e.offsetX, e.offsetY);
+    console.log("size", e.target.offsetWidth, e.target.offsetWidth)
+    console.log(e.offsetX, e.offsetY)
+
+    let pos = undefined;
+
+    let offset = e.target.getBoundingClientRect();
+    //console.log(offset.x, offset.y)
+    let offsetX = e.clientX - offset.x;
+    let offsetY = e.clientY - offset.y;
+    //console.log({offsetX, offsetY})
+
+    if (e.offsetX < e.target.offsetWidth/4){
+        pos = "before";
+    } else if (e.offsetX > (e.target.offsetWidth*3)/4){
+        pos = "after";
+    } else {
+        pos = "inside";
+    }
+
+
+    if (e.target == dragTarget|| e.target == undefined) {
+        //console.log("removing clone...");
+        dragClone.remove();
+        dragOk = false;
+        return 
+    } else if (e.target == dragClone){
+        dragOk = true;
+        return
+    } 
+    editorFrame.querySelectorAll(".drag-before").forEach(el => {el.classList.remove("drag-before")})
+    editorFrame.querySelectorAll(".drag-after").forEach(el => {el.classList.remove("drag-after")})
+    editorFrame.querySelectorAll(".drag-into").forEach(el => {el.classList.remove("drag-into")})
+
+    if (e.target == editorFrame ){
+        editorFrame.appendChild(dragClone)
+        dragOk = true;
+    } else if (pos === "before"){
+        //console.log("clone before");
+        e.target.before(dragClone);
+        dragOk = true;
+        e.target.classList.add("drag-before");
+    } else if (pos === "after") {
+        //console.log("clone after");
+        e.target.after(dragClone);
+        dragOk = true;
+        e.target.classList.add("drag-after");
+    } else if (pos === "inside") {
+        //console.log("clone inside");
+        e.target.appendChild(dragClone);
+        e.target.classList.classList
+        dragOk = true;
+        e.target.classList.add("drag-into");
+    }
+
+
 
 }, {"passive":false, "capture":true});
 
@@ -82,6 +152,7 @@ function selectClosestElement(event){
 
     let menuItem = document.querySelector("#editor-tree").querySelector("#"+id);
     menuItem.classList.add("selected");
+    menuItem.scrollIntoView()
 
     return target
 }
@@ -99,14 +170,33 @@ async function buildTree(treelement=undefined, tree=undefined, depth=0){
     Object.entries(tree).forEach(k => {
         t = k[1];
         k = k[0];
-        console.log(k, t);
+        //console.log(k, t);
         el = document.createElement("div");
         el.id = k;
         el.classList="editor-tree-item";
-        title = document.createElement("p");
-        title.innerText = k;
-        el.style.paddingLeft = "1em";
+        title = document.createElement("div");
+        title.innerText = "-"+k;
+        el.style.marginLeft = "1em";
+        el.style.borderLeft = "solid black 1px"
+        el.style.cursor = "pointer";
         el.appendChild(title);
+        
+        el.addEventListener("mouseover", (e) => {
+            if (e.target.classList.contains("selected") || e.target.parentElement.classList.contains("selected")){return}; 
+            e.target.style.backgroundColor = 'antiquewhite';
+            let t=undefined;if(e.target.id===undefined||e.target.id===""){t=e.target.parentElement}else{t=e.target};let tId=t.id; let tEl=document.documentElement.querySelector("."+String(tId));
+            tEl.style.boxShadow = "inset 0px 0px 0px 1px orange"; // Maybe needs -webkit and -moz variants
+        });
+        el.addEventListener("mouseout", (e) => {
+            e.target.style.backgroundColor = ''
+            let t=undefined;if(e.target.id===undefined||e.target.id===""){t=e.target.parentElement}else{t=e.target};let tId=t.id; let tEl=document.documentElement.querySelector("."+String(tId));
+            tEl.style.boxShadow = ""; // Maybe needs -webkit and -moz variants
+        });
+        
+        el.addEventListener("click", (e) => {
+            let t=undefined;if(e.target.id===undefined||e.target.id===""){t=e.target.parentElement}else{t=e.target};let tId=t.id; let tEl=document.documentElement.querySelector("."+String(tId));
+            tEl.click()
+        });
         treelement.appendChild(el);
         buildTree(el, t, depth=depth+1);
     })
