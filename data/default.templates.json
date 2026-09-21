@@ -1,0 +1,20 @@
+{
+    "div-h": {
+        "type": "div",
+        "style": {
+            "display": "flex",
+            "flex-direction": "row",
+            "width": "auto",
+            "height": "auto"
+        }
+    },
+    "div-v": {
+        "type": "div",
+        "style": {
+            "display": "flex",
+            "flex-direction": "column",
+            "width": "auto",
+            "height": "auto"
+        }
+    }
+}

@@ -15,6 +15,7 @@
     "elements": [
         {
             "type":"div",
+            "name": "div1",
             "class": "test-div aaa",
             "content": "Hello",
             "elements": [
@@ -26,6 +27,7 @@
         },
         {
             "type": "div",
+            "name": "div1",
             "class": "test-div2 aaa",
             "content": "oooo",
             "style": {

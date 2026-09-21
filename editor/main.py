@@ -123,7 +123,16 @@ class Layout(object):
         for child in element.elements:
             self.counter += 1
             e = Element(child)
-            e.counter = f"e{self.counter}"
+
+            if e.name is not None:
+                i = 1
+                ii = ""
+                while f"{e.name}{ii}" in self.elements:
+                        i+=1
+                        ii = f"-{i}"
+                e.counter = f"{e.name}{ii}"
+            else:
+                e.counter = f"e{self.counter}"
             self.elements[e.counter] = e
             element.children.append(e)
             e.parent = element
@@ -150,6 +159,7 @@ class Element(object):
         self.type = element.get("type", "div")
         self.content = element.get("content", "")
         self.id = element.get("id", "")
+        self.name = element.get("name", None)
         self.classlist = element.get("classlist", "")
         self.style = element.get("style", {})
         self.elements = element.get("elements", [])
