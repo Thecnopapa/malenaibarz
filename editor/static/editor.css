@@ -15,7 +15,7 @@ body{
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    height: 97%;
+    height: 96%;
     width: 18%;
     background-color: lightgrey;
     padding:1%;
@@ -23,7 +23,7 @@ body{
 
 #editor-page-visual{
     padding:1%;
-    height:97%;
+    height:96%;
     width: 78%;
     display: flex;
     flex-direction: column;
@@ -33,8 +33,9 @@ body{
 
 #editor-frame{
     border: black solid 1px;
-    width:98%;
+    width:97%;
     height:88%;
+    overflow-y: scroll;
 }
 
 
@@ -52,6 +53,30 @@ body{
     background-color: whitesmoke;
 }
 
+
+#editor-build-blocks{
+    display:flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    height: 50%;
+    max-height: 50%;
+    overflow-y: scroll;
+    width:100%;
+    scrollbar-width: thin;
+    scrollbar-color: grey transparent;
+    justify-content: space-between;
+}
+.editor-build-block{
+    display: flex;
+    flex-direction: column;
+    width: 45%;
+    height: 20%;
+    background-color: white;
+    align-items: center;
+    justify-content: center;
+}
+
+
 .selected:not(.editor-tree-item){
     box-shadow: inset 0px 0px 0px 3px orange !important;
     cursor: pointer;
@@ -62,7 +87,7 @@ body{
 }
 
 .dragged{
-    background-color: green !important;
+    background-color: lightgreen !important;
 }
 .drag-before{
     border-left: cyan solid 3px !important;
@@ -72,4 +97,14 @@ body{
 }
 .drag-into{
     border: cyan solid 3px !important; 
+}
+
+.selected:not(.editor-tree-item).editor-striped{
+    background: repeating-linear-gradient(
+        45deg,
+        transparent ,
+        transparent 10px,
+        salmon 30px,
+        salmon 40px 
+    );
 }

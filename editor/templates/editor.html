@@ -8,16 +8,22 @@
             <h3>Menu</h3>
             <button class=editor-menu-button>Visual</button>
             <button class=editor-menu-button>Code</button>
-            <div id="editor-tree">
-            </div>
+            <h4>Page Structure</h4>
+            <div id="editor-tree"></div>
+            <h4>Add items</h4>
+            <script>
+                let buildBlocks = {{ templates.json() |safe }}
+            </script>
+            <div id="editor-build-blocks"></div>
+            
             
         </div>
-        <div id="editor-page-visual">
+        <div id="editor-page-visual" >
             <h3>Visual Editor</h3>
             <script>
                 let layout = {{ page.layout.json() |safe }}
             </script>
-            <div id=editor-frame>
+            <div id=editor-frame counter="frame">
                 {{ page.render(editor=True) |safe }}
             </div>
         </div>

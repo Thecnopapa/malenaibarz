@@ -96,7 +96,25 @@ def return_static(file):
 
 
 
+class Templates(object):
+    def __init__(self, name="default"):
+        self.path = os.path.join(data_folder, f"{name}.templates.json")
+        self.data = json.load(open(self.path))
+        self.elements = {}
 
+        self.process_elements()
+
+
+    def process_elements(self):
+        for k, v in self.data.items():
+            e = Element(v)
+            self.elements[k] = {
+                "html": e.render(editor=True),
+                "tag": e.type,
+            }
+
+    def json(self, indent=None,):
+        return json.dumps(self.elements, indent=indent)
     
 class Layout(object):
     def __init__(self, element):
@@ -164,6 +182,7 @@ class Element(object):
         self.style = element.get("style", {})
         self.elements = element.get("elements", [])
         self.imports = element.get("imports", [])
+        self.invisible = element.get("invisible", False)
 
         self.children = []
         self.parent = None
@@ -198,8 +217,16 @@ class Element(object):
         if editor and self.type == "body":
             t = "div"
 
+        classlist = self.classlist
 
-        html += indent + f"<{t} id='{self.id}' counter='{self.counter}' class='{self.classlist} {self.counter}' style='{self.process_style()}'"
+        if editor and self.invisible:
+            classlist += " editor-striped"
+
+        if self.counter is None:
+            counter = ""
+        else:
+            counter = self.counter
+        html += indent + f"<{t} id='{self.id}' counter='{counter}' class='{classlist} {counter}' style='{self.process_style()}'"
         
         html += ">\n"
         html += indent + self.content + "\n"
@@ -245,7 +272,7 @@ def preview_page(page):
 
 @app.get("/edit/<page>")
 def edit_page(page):
-    return render_template("editor.html", page=Page(page))
+    return render_template("editor.html", page=Page(page), templates=Templates())
 
 
 @app.get("/")
