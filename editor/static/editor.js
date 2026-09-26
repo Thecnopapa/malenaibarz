@@ -54,10 +54,12 @@ document.documentElement.addEventListener('dragend', (e) => {
         if (dragTarget !== undefined){
             dragTarget.remove();
         } else {
+            console.log("Setting counter to:", "new"+ String(newIds))
             dragClone.setAttribute("counter", "new"+ String(newIds));
             newIds +=1
         }
         console.log({dragClone, dragInto, dragPosition})
+        console.log(dragClone.getAttribute("counter"), dragInto.getAttribute("counter"))
         modifyTree(dragClone.getAttribute("counter"), dragInto.getAttribute("counter"), dragPosition)
     }
     document.documentElement.querySelectorAll(".dragged").forEach(el => {el.classList.remove("dragged")});
@@ -91,9 +93,9 @@ editorFrame.addEventListener('dragover', (e) => {
     let offsetY = e.clientY - offset.y;
     //console.log({offsetX, offsetY})
 
-    if (e.offsetX < e.target.offsetWidth/4){
+    if (e.offsetX < e.target.offsetWidth/8){
         pos = "before";
-    } else if (e.offsetX > (e.target.offsetWidth*3)/4){
+    } else if (e.offsetX > (e.target.offsetWidth*7)/8){
         pos = "after";
     } else {
         pos = "inside";
@@ -166,7 +168,7 @@ function selectClosestElement(event){
 
     target.classList.add("selected");
     target.setAttribute("draggable", "true")
-    let id = target.attributes.counter.value;
+    let id = target.getAttribute("counter");
 
     let menuItem = document.querySelector("#editor-tree").querySelector("#"+id);
     menuItem.classList.add("selected");
@@ -222,7 +224,8 @@ async function buildTree(treelement=undefined, tree=undefined, depth=0){
     Object.entries(tree).forEach(k => {
         t = k[1];
         k = k[0];
-        let el = setTreeElement(k)
+        let el = setTreeElement(k);
+        el.setAttribute("depth", depth);
         treelement.appendChild(el);
         buildTree(el, t, depth=depth+1);
     })
@@ -231,7 +234,6 @@ async function buildTree(treelement=undefined, tree=undefined, depth=0){
 
 function modifyTree(movingId, targetId, position){
     
-    
     let treeElement = document.querySelector("#editor-tree");
     if (targetId === "frame"){
         targetId = treeElement.lastElementChild.id;
@@ -239,7 +241,7 @@ function modifyTree(movingId, targetId, position){
     }
     console.log({movingId, targetId, position})
     let el = treeElement.querySelector("#"+movingId);
-    if (el === undefined){
+    if (el === undefined || el === null){
         el = setTreeElement(movingId);
     }
 

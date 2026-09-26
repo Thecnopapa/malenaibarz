@@ -88,6 +88,7 @@ body{
 
 .dragged{
     background-color: lightgreen !important;
+    opacity: 0.5;
 }
 .drag-before{
     border-left: cyan solid 3px !important;
