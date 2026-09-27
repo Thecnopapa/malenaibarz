@@ -54,8 +54,10 @@ document.documentElement.addEventListener('dragend', (e) => {
         if (dragTarget !== undefined){
             dragTarget.remove();
         } else {
-            console.log("Setting counter to:", "new"+ String(newIds))
-            dragClone.setAttribute("counter", "new"+ String(newIds));
+            let counter = "new"+ String(newIds)
+            console.log("Setting counter to:", counter);
+            dragClone.setAttribute("counter", counter);
+            dragClone.classList.add(counter)
             newIds +=1
         }
         console.log({dragClone, dragInto, dragPosition})
@@ -111,6 +113,13 @@ editorFrame.addEventListener('dragover', (e) => {
         dragOk = true;
         return
     } 
+
+    target = e.target;
+
+    while ([null, undefined, ""].includes(target.getAttribute("counter"))){
+        if (target == editorFrame){break}
+        target = target.parentElement
+    }
     document.documentElement.querySelectorAll(".drag-before").forEach(el => {el.classList.remove("drag-before")})
     document.documentElement.querySelectorAll(".drag-after").forEach(el => {el.classList.remove("drag-after")})
     document.documentElement.querySelectorAll(".drag-into").forEach(el => {el.classList.remove("drag-into")})
@@ -207,6 +216,49 @@ function setTreeElement(k){
         let t=undefined;if(e.target.id===undefined||e.target.id===""){t=e.target.parentElement}else{t=e.target};let tId=t.id; let tEl=document.documentElement.querySelector("."+String(tId));
         tEl.click()
     });
+    el.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        let t=undefined;if(e.target.id===undefined||e.target.id===""){t=e.target.parentElement}else{t=e.target};
+        if (! t.classList.contains("editable")){
+            t.classList.add("editable");
+            t.firstElementChild.setAttribute("contenteditable", "true")
+            t.firstElementChild.focus()
+        }
+
+    }, {passive:false});
+
+    el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            e.target.blur()
+        }
+    });
+
+    el.addEventListener("focusout", (e) => {
+        let t=undefined;if(e.target.id===undefined||e.target.id===""){t=e.target.parentElement}else{t=e.target};let tId=t.id; let tEl=document.documentElement.querySelector("."+String(tId));
+        let newid = t.firstElementChild.innerText.trim()
+        if ([...newid][0] === "-"){
+            newid = newid.slice(1);
+        }
+        newid = newid.replace(" ", "_");
+        newid = newid.replace("\n", "_");
+        let oldid = t.id;
+        
+        if (oldid !== newid){
+            console.log(oldid, "-->", newid);
+            t.id = newid;
+            tEl.setAttribute("counter", newid);
+            tEl.classList.remove(oldid);
+            tEl.classList.add(newid);
+            console.log(t);
+        }
+        t.classList.remove("editable");
+        t.firstElementChild.setAttribute("contenteditable", "");
+        t.firstElementChild.blur();
+
+    });
     return el
 
 }
@@ -264,8 +316,11 @@ async function setupBuildBlocks(){
         el.style.cursor = "pointer";
         el.setAttribute("draggable", "true");
         el.addEventListener("dragstart", (e) => {
-            dragClone = document.createElement(b[1].tag);
-            dragClone.innerHTML = b[1].html;
+            let wrapper = document.createElement("div");
+            wrapper.innerHTML = b[1].html;
+            dragClone = wrapper.firstElementChild;
+            wrapper.before(dragClone);
+            wrapper.remove();
             dragClone.classList.add("drag-clone");
             e.target.classList.add("dragged");
         });
