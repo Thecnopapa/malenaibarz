@@ -10,6 +10,95 @@ let newIds = 1;
 console.log(editorFrame);
 
 
+
+class Change {
+    constructor(type, target, from, to){
+        this.type = type;
+        this.target = target;
+        this.from = from;
+        this.to = to;
+    }
+    json(){
+        return JSON.stringify({
+            "type": this.type,
+            "target": this.target,
+            "from": this.from,
+            "to": this.to,
+        });
+    }
+}
+
+
+class Session {
+    constructor(){
+        this.i = 0;
+        this.n = 0;
+        this.storage = sessionStorage;
+        this.changes = {}
+        this.loadChanges()
+    }
+    storageAvailable() {
+        try {
+            const x = "__storage_test__";
+            this.storage.setItem(x, x);
+            this.storage.removeItem(x);
+            return true;
+        } catch (e) {
+            console.error("Storage Failed:", e);
+            return false
+        }
+    }
+
+    loadChanges(){
+        console.log("Loading stored changes...");
+        while (this.i < 10000){
+            try{
+                let k = "change_"+String(this.i)
+                let v = this.storage.getItem(k)
+                if (v === null){
+                    console.log("End of stored changes");
+                    break
+                }
+                let data = JSON.parse(v)
+                this.changes[this.i] = new Change(data.type, data.target, data.from, data.to)
+                this.i += 1
+                this.n += 1
+            } catch (e) {
+                console.error(e)
+                break
+            }
+        }
+        console.log(`Loaded ${this.n} changes`)
+        console.log(this.changes)
+    }
+
+    addChange(change){
+
+        if (this.storageAvailable()){
+            let key = "change_"+String(this.i)
+            console.log("Storing change:", key)
+            this.storage.setItem(key, change.json())
+            this.n = this.i;
+            this.i +=1;
+        } else {
+            throw new Error("Session storage not available");
+        }
+    }
+}
+
+let session = new Session();
+
+
+
+session.addChange(new Change("load", "this", "old", "new" ))
+
+
+
+
+
+
+
+
 editorFrame.addEventListener('click', (e) => {
 
     e.preventDefault();
@@ -243,7 +332,6 @@ function setTreeElement(k){
             newid = newid.slice(1);
         }
         newid = newid.replace(" ", "_");
-        newid = newid.replace("\n", "_");
         let oldid = t.id;
         
         if (oldid !== newid){
@@ -253,6 +341,7 @@ function setTreeElement(k){
             tEl.classList.remove(oldid);
             tEl.classList.add(newid);
             console.log(t);
+            storeData("idchange", oldid+ "-->"+ newid )
         }
         t.classList.remove("editable");
         t.firstElementChild.setAttribute("contenteditable", "");
@@ -269,7 +358,7 @@ async function buildTree(treelement=undefined, tree=undefined, depth=0){
         treelement= document.querySelector("#editor-tree");
     }
     if (tree === undefined){
-        tree = layout
+        tree = layout;
     }
 
     console.log({tree, treelement})
@@ -328,6 +417,10 @@ async function setupBuildBlocks(){
     });
 }
 
-setupBuildBlocks()
+function storeData(key, value){
+    sessionStorage.setItem(key, value);
+}
 
+
+setupBuildBlocks()
 buildTree()
