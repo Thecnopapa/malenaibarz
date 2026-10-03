@@ -1,4 +1,6 @@
 
+let CONTROL_PRESSED = false;
+
 let dragPosition = undefined;
 let dragInto = undefined;
 let dragTarget = undefined;
@@ -12,11 +14,12 @@ console.log(editorFrame);
 
 
 class Change {
-    constructor(type, target, from, to){
+    constructor(type, target, from, to, data={}){
         this.type = type;
         this.target = target;
         this.from = from;
         this.to = to;
+        this.data = data;
     }
     json(){
         return JSON.stringify({
@@ -24,7 +27,43 @@ class Change {
             "target": this.target,
             "from": this.from,
             "to": this.to,
+            "data": this.data
         });
+    }
+    repr(){
+        return `<Change (${this.type}): ${this.target}>`;
+    }
+
+    apply(revert=false){
+        console.log("Applying change: "+this.repr())+`(revert=${revert})`;
+        if (this.type === "move"){
+            this._applyMove(revert);
+        }
+
+    }
+
+    _applyMove(revert=false){
+        console.log(`Applying move... (revert=${revert})`);
+        let target = this.target;
+        let from = undefined;
+        let to = undefined;
+        let pos = undefined;
+        console.log(this.data)
+
+        if (revert){
+            from = this.to;
+            to = this.from;
+            pos = this.data["prev_pos"];
+        } else {
+            from = this.from;
+            to = this.to;
+            pos = this.data["new_pos"];
+        }
+
+        console.log({target, from, to, pos});
+
+
+
     }
 }
 
@@ -33,9 +72,10 @@ class Session {
     constructor(){
         this.i = 0;
         this.n = 0;
-        this.storage = sessionStorage;
-        this.changes = {}
-        this.loadChanges()
+        this.storage = localStorage;
+        this.changes = {};
+        this.loadChanges();
+        this.applyChanges();
     }
     storageAvailable() {
         try {
@@ -48,41 +88,97 @@ class Session {
             return false
         }
     }
+    update_i(i=undefined){
+        if (i === undefined){
+            i = this.i +1;
+        }
+        this.i = i
+        this.storage.setItem("i", this.i);
+        console.log(`Current i=${this.i} (n=${this.n})`)
+    }
 
     loadChanges(){
         console.log("Loading stored changes...");
-        while (this.i < 10000){
+        
+        while (this.n < 1000){
             try{
-                let k = "change_"+String(this.i)
+                let k = "change_"+String(this.n+1)
                 let v = this.storage.getItem(k)
                 if (v === null){
                     console.log("End of stored changes");
                     break
                 }
                 let data = JSON.parse(v)
-                this.changes[this.i] = new Change(data.type, data.target, data.from, data.to)
-                this.i += 1
+                this.changes[this.n] = new Change(data.type, data.target, data.from, data.to, data.data)
                 this.n += 1
             } catch (e) {
-                console.error(e)
+                console.error(e);
                 break
             }
         }
         console.log(`Loaded ${this.n} changes`)
         console.log(this.changes)
+        this.i = 0;
+        
     }
 
-    addChange(change){
+    applyChanges(){
+        console.log("Applying loaded changes...");
+        let i = this.storage.getItem("i");
+        if (i === null){
+            i = 0;
+        }
+        i = Number(i)
+        console.log("Saved i", i)
+        while (this.i < i){
+            this.update_i()
+            console.log(this.i , i);
+            this.applyLastChange();
 
+        }
+        
+    }
+
+    applyLastChange(){
+        if (this.i > this.n){
+            console.warn("No more changes to apply");
+            this.update_i(this.n)
+        } else {
+            this.changes[this.i-1].apply()
+        }
+        
+        
+    }
+    revertLastChange(){
+        if (this.i > 0){
+            this.changes[this.i-1].apply(true)
+            this.update_i(this.i - 1)
+        } else {
+            console.warn("Can't undo any more!")
+        }
+        
+    }
+
+
+
+
+    addChange(change){
+        console.log("Adding change...");
+        if (! (change instanceof Change)){
+            change = new Change(...change);
+        }
+        console.log(change);
         if (this.storageAvailable()){
-            let key = "change_"+String(this.i)
-            console.log("Storing change:", key)
-            this.storage.setItem(key, change.json())
+            this.update_i();
+            let key = "change_"+String(this.i);
+            console.log("Storing change:", key);
+            this.storage.setItem(key, change.json());
             this.n = this.i;
-            this.i +=1;
+            this.applyLastChange();
         } else {
             throw new Error("Session storage not available");
         }
+        
     }
 }
 
@@ -90,7 +186,7 @@ let session = new Session();
 
 
 
-session.addChange(new Change("load", "this", "old", "new" ))
+//session.addChange(new Change("move", "this", "old", "new", {"prev_pos": "pos1", "new_pos": "pos2"} ))
 
 
 
@@ -137,27 +233,28 @@ editorFrame.addEventListener('dragstart', (e) => {
 
 
 document.documentElement.addEventListener('dragend', (e) => {
-    console.log("Drag End OK=", dragOk)
+    console.log("Drag End OK=", dragOk);
     if (dragClone === undefined){return}
     if (dragOk){
         if (dragTarget !== undefined){
             dragTarget.remove();
         } else {
-            let counter = "new"+ String(newIds)
+            let counter = "new"+ String(newIds);
             console.log("Setting counter to:", counter);
             dragClone.setAttribute("counter", counter);
-            dragClone.classList.add(counter)
-            newIds +=1
+            dragClone.classList.add(counter);
+            newIds +=1;
         }
-        console.log({dragClone, dragInto, dragPosition})
-        console.log(dragClone.getAttribute("counter"), dragInto.getAttribute("counter"))
-        modifyTree(dragClone.getAttribute("counter"), dragInto.getAttribute("counter"), dragPosition)
+        console.log({dragClone, dragInto, dragPosition});
+        console.log(dragClone.getAttribute("counter"), dragInto.getAttribute("counter"));
+        session.addChange(["move", dragClone.getAttribute("counter"), undefined, dragInto.getAttribute("counter"), {"new_pos":dragPosition}])
+        modifyTree(dragClone.getAttribute("counter"), dragInto.getAttribute("counter"), dragPosition);
     }
     document.documentElement.querySelectorAll(".dragged").forEach(el => {el.classList.remove("dragged")});
     document.documentElement.querySelectorAll(".drag-clone").forEach(el => {el.classList.remove("drag-clone")});
-    document.documentElement.querySelectorAll(".drag-before").forEach(el => {el.classList.remove("drag-before")})
-    document.documentElement.querySelectorAll(".drag-after").forEach(el => {el.classList.remove("drag-after")})
-    document.documentElement.querySelectorAll(".drag-into").forEach(el => {el.classList.remove("drag-into")})
+    document.documentElement.querySelectorAll(".drag-before").forEach(el => {el.classList.remove("drag-before")});
+    document.documentElement.querySelectorAll(".drag-after").forEach(el => {el.classList.remove("drag-after")});
+    document.documentElement.querySelectorAll(".drag-into").forEach(el => {el.classList.remove("drag-into")});
     
 
     dragPosition = undefined;
@@ -397,6 +494,7 @@ function modifyTree(movingId, targetId, position){
 }
 
 async function setupBuildBlocks(){
+    console.log("Build blocks:")
     Object.entries(buildBlocks).forEach(b => {
         console.log(b);
         let el = document.createElement("div");
@@ -421,6 +519,33 @@ function storeData(key, value){
     sessionStorage.setItem(key, value);
 }
 
+
+
+document.documentElement.addEventListener('keydown', (e) => {
+    if (e.key === 'Control') {
+        CONTROL_PRESSED = true;
+        console.log("Control pressed:", CONTROL_PRESSED);
+    }
+    if (e.key === 'z' && CONTROL_PRESSED){
+        e.preventDefault();
+        console.log("CTRL-Z");
+        session.revertLastChange();
+    }
+    if (e.key === 'y' && CONTROL_PRESSED){
+        e.preventDefault();
+        console.log("CTRL-Y");
+        session.update_i();
+        session.applyLastChange();
+
+    }
+});
+document.documentElement.addEventListener('keyup', (e) => {
+    if (e.key === 'Control') {
+        CONTROL_PRESSED = false;
+        console.log("Control pressed:", CONTROL_PRESSED);
+    }
+
+});
 
 setupBuildBlocks()
 buildTree()
