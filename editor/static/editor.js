@@ -34,34 +34,65 @@ class Change {
         return `<Change (${this.type}): ${this.target}>`;
     }
 
-    apply(revert=false){
-        console.log("Applying change: "+this.repr())+`(revert=${revert})`;
+    _selectElement(counter){
+        let candidates = editorFrame.querySelectorAll(`.${counter}`);
+        let selected = null
+        candidates.forEach((el) => {
+            //console.log(el);
+            if (el.getAttribute("counter") === counter){
+                console.log(el);
+                selected = el;
+            }
+        })
+        return selected
+
+    }
+
+    apply(revert=false, dry=false){
+        if (dry){
+            return
+        }
+        console.log("Applying change: "+this.repr()+`(revert=${revert} dry=${dry})`);
         if (this.type === "move"){
-            this._applyMove(revert);
+            this._applyMove(revert, dry);
         }
 
     }
 
-    _applyMove(revert=false){
-        console.log(`Applying move... (revert=${revert})`);
+    _applyMove(revert=false, dry=false){
+        console.log(`Applying move... (revert=${revert} dry=${dry})`);
+        if (dry){
+            return
+        }
+
         let target = this.target;
-        let from = undefined;
         let to = undefined;
         let pos = undefined;
         console.log(this.data)
 
         if (revert){
-            from = this.to;
             to = this.from;
             pos = this.data["prev_pos"];
         } else {
-            from = this.from;
             to = this.to;
             pos = this.data["new_pos"];
         }
 
-        console.log({target, from, to, pos});
+        console.log({target, to, pos});
 
+        let targetEl = this._selectElement(target);
+        let toEl = this._selectElement(to);
+
+        console.log({targetEl, toEl})
+
+        if (pos === "before"){
+            toEl.before(targetEl);
+        } else if (pos === "after"){
+            toEl.after(targetEl);
+        } else if (pos === "inside"){
+            toEl.appendChild(targetEl);
+        }
+        modifyTree(target, to, pos);
 
 
     }
@@ -94,6 +125,7 @@ class Session {
         }
         this.i = i
         this.storage.setItem("i", this.i);
+        this.storage.setItem("n", this.n);
         console.log(`Current i=${this.i} (n=${this.n})`)
     }
 
@@ -139,19 +171,20 @@ class Session {
         
     }
 
-    applyLastChange(){
+    applyLastChange(dry=false){
         if (this.i > this.n){
             console.warn("No more changes to apply");
             this.update_i(this.n)
         } else {
-            this.changes[this.i-1].apply()
+            this.changes[this.i-1].apply(false, dry)
         }
         
         
     }
-    revertLastChange(){
+    revertLastChange(dry=false){
         if (this.i > 0){
-            this.changes[this.i-1].apply(true)
+            console.log(this.changes[this.i-1], this.i)
+            this.changes[this.i-1].apply(true, dry)
             this.update_i(this.i - 1)
         } else {
             console.warn("Can't undo any more!")
@@ -162,19 +195,20 @@ class Session {
 
 
 
-    addChange(change){
-        console.log("Adding change...");
+    addChange(change, dry=false){
+        console.log(`Adding change... (dry=${dry})`);
         if (! (change instanceof Change)){
             change = new Change(...change);
         }
         console.log(change);
         if (this.storageAvailable()){
+            this.n += 1;
             this.update_i();
             let key = "change_"+String(this.i);
-            console.log("Storing change:", key);
+            console.log("Storing change:", key, this.i);
             this.storage.setItem(key, change.json());
-            this.n = this.i;
-            this.applyLastChange();
+            this.changes[this.i-1] = change;
+            this.applyLastChange(dry);
         } else {
             throw new Error("Session storage not available");
         }
@@ -182,7 +216,6 @@ class Session {
     }
 }
 
-let session = new Session();
 
 
 
@@ -247,7 +280,7 @@ document.documentElement.addEventListener('dragend', (e) => {
         }
         console.log({dragClone, dragInto, dragPosition});
         console.log(dragClone.getAttribute("counter"), dragInto.getAttribute("counter"));
-        session.addChange(["move", dragClone.getAttribute("counter"), undefined, dragInto.getAttribute("counter"), {"new_pos":dragPosition}])
+        session.addChange(["move", dragClone.getAttribute("counter"), undefined, dragInto.getAttribute("counter"), {"new_pos":dragPosition}], true)
         modifyTree(dragClone.getAttribute("counter"), dragInto.getAttribute("counter"), dragPosition);
     }
     document.documentElement.querySelectorAll(".dragged").forEach(el => {el.classList.remove("dragged")});
@@ -290,7 +323,7 @@ editorFrame.addEventListener('dragover', (e) => {
     }
 
 
-    if (e.target == dragTarget|| e.target == undefined) {
+    if (e.target == dragTarget || e.target == undefined || dragTarget.contains(e.target)) {
         //console.log("removing clone...");
         dragClone.remove();
         dragOk = false;
@@ -309,37 +342,40 @@ editorFrame.addEventListener('dragover', (e) => {
     document.documentElement.querySelectorAll(".drag-before").forEach(el => {el.classList.remove("drag-before")})
     document.documentElement.querySelectorAll(".drag-after").forEach(el => {el.classList.remove("drag-after")})
     document.documentElement.querySelectorAll(".drag-into").forEach(el => {el.classList.remove("drag-into")})
-    if (e.target == editorFrame ){
-        editorFrame.appendChild(dragClone)
-        dragPosition = "inside";
-        dragInto = e.target;
-        dragOk = true;
-    } else if (pos === "before"){
-        //console.log("clone before");
-        e.target.before(dragClone);
-        dragOk = true;
-        dragPosition = "before";
-        dragInto = e.target;
-        e.target.classList.add("drag-before");
-    } else if (pos === "after") {
-        //console.log("clone after");
-        e.target.after(dragClone);
-        dragOk = true;
-        dragPosition = "after";
-        dragInto = e.target;
-        e.target.classList.add("drag-after");
-    } else if (pos === "inside") {
-        //console.log("clone inside");
-        e.target.appendChild(dragClone);
-        e.target.classList.classList
-        dragOk = true;
-        dragPosition = "inside";
-        dragInto = e.target;
-        e.target.classList.add("drag-into");
-    } else {
-        dragOk = false;
+    try{
+        if (e.target == editorFrame ){
+            editorFrame.appendChild(dragClone)
+            dragPosition = "inside";
+            dragInto = e.target;
+            dragOk = true;
+        } else if (pos === "before"){
+            //console.log("clone before");
+            e.target.before(dragClone);
+            dragOk = true;
+            dragPosition = "before";
+            dragInto = e.target;
+            e.target.classList.add("drag-before");
+        } else if (pos === "after") {
+            //console.log("clone after");
+            e.target.after(dragClone);
+            dragOk = true;
+            dragPosition = "after";
+            dragInto = e.target;
+            e.target.classList.add("drag-after");
+        } else if (pos === "inside") {
+            //console.log("clone inside");
+            e.target.appendChild(dragClone);
+            e.target.classList.classList
+            dragOk = true;
+            dragPosition = "inside";
+            dragInto = e.target;
+            e.target.classList.add("drag-into");
+        } else {
+            dragOk = false;
+        }
+    } catch {
+        dragOk = false
     }
-
 
 
 
@@ -549,3 +585,5 @@ document.documentElement.addEventListener('keyup', (e) => {
 
 setupBuildBlocks()
 buildTree()
+let session = new Session();
+
