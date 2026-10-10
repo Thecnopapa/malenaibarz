@@ -5,7 +5,10 @@ let dragPosition = undefined;
 let dragInto = undefined;
 let dragTarget = undefined;
 let dragClone = undefined;
+let dragPrevEl = undefined;
+let dragPrevPos = undefined;
 let dragOk = false;
+
 let editorFrame = document.querySelector("#editor-frame");
 let buildBlockContainer = document.querySelector("#editor-build-blocks");
 let newIds = 1;
@@ -35,6 +38,9 @@ class Change {
     }
 
     _selectElement(counter){
+        if (counter === "frame"){
+            return editorFrame
+        }
         let candidates = editorFrame.querySelectorAll(`.${counter}`);
         let selected = null
         candidates.forEach((el) => {
@@ -257,6 +263,16 @@ editorFrame.addEventListener('dragstart', (e) => {
     let clone = target.cloneNode(deep=true);
     dragClone = clone;
     dragTarget = target;
+    console.log("prev el", target.nextElementSibling);
+    if (target.nextElementSibling === null){
+        dragPrevEl = target.parentElement;
+        dragPrevPos = "inside";
+    } else {
+        dragPrevEl = target.nextElementSibling;
+        dragPrevPos = "before";
+    }
+    console.log({dragPrevEl, dragPrevPos})
+    
 
     clone.classList.add("drag-clone");
     target.classList.add("dragged");
@@ -280,7 +296,7 @@ document.documentElement.addEventListener('dragend', (e) => {
         }
         console.log({dragClone, dragInto, dragPosition});
         console.log(dragClone.getAttribute("counter"), dragInto.getAttribute("counter"));
-        session.addChange(["move", dragClone.getAttribute("counter"), undefined, dragInto.getAttribute("counter"), {"new_pos":dragPosition}], true)
+        session.addChange(["move", dragClone.getAttribute("counter"), dragPrevEl.getAttribute("counter"), dragInto.getAttribute("counter"), {"new_pos":dragPosition, "prev_pos":dragPrevPos}], true)
         modifyTree(dragClone.getAttribute("counter"), dragInto.getAttribute("counter"), dragPosition);
     }
     document.documentElement.querySelectorAll(".dragged").forEach(el => {el.classList.remove("dragged")});
@@ -294,6 +310,8 @@ document.documentElement.addEventListener('dragend', (e) => {
     dragInto = undefined;
     dragTarget = undefined;
     dragClone = undefined;
+    dragPrevEl = undefined;
+    dragPrevPos = undefined;
     dragOk = false;
     
 
@@ -301,10 +319,11 @@ document.documentElement.addEventListener('dragend', (e) => {
 
 editorFrame.addEventListener('dragover', (e) => {
     if (dragClone === undefined){return}
-    console.log("Dragging over:", e.target, e);
+    console.log("dragging...")
+    //console.log("Dragging over:", e.target, e);
     //console.log(e.target, e.toElement, e.offsetX, e.offsetY);
-    console.log("size", e.target.offsetWidth, e.target.offsetWidth)
-    console.log(e.offsetX, e.offsetY)
+    //console.log("size", e.target.offsetWidth, e.target.offsetWidth)
+    //console.log(e.offsetX, e.offsetY)
 
     let pos = undefined;
 
