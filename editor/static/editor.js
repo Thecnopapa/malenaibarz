@@ -73,23 +73,37 @@ class Change {
 
         let target = this.target;
         let to = undefined;
+        let from = undefined;
         let pos = undefined;
+        let origin = undefined;
         console.log(this.data)
 
         if (revert){
             to = this.from;
+            from = this.to;
             pos = this.data["prev_pos"];
+            origin = this.data["new_pos"]
         } else {
             to = this.to;
+            from = this.from;
             pos = this.data["new_pos"];
+            origin = this.data["prev_pos"];
         }
 
-        console.log({target, to, pos});
+        console.log({target, to, from, pos});
 
-        let targetEl = this._selectElement(target);
+        let targetEl = undefined;
         let toEl = this._selectElement(to);
 
+        if (origin === "outside" ){
+            targetEl = renderBuildBlock(from, target);
+        } else {
+            targetEl = this._selectElement(target);
+        }
+
         console.log({targetEl, toEl})
+
+
 
         if (pos === "before"){
             toEl.before(targetEl);
@@ -97,6 +111,8 @@ class Change {
             toEl.after(targetEl);
         } else if (pos === "inside"){
             toEl.appendChild(targetEl);
+        } else if (pos === "outside"){
+            targetEl.remove();
         }
         modifyTree(target, to, pos);
 
@@ -283,9 +299,10 @@ editorFrame.addEventListener('dragstart', (e) => {
 
 document.documentElement.addEventListener('dragend', (e) => {
     console.log("Drag End OK=", dragOk);
+    let dry = true;
     if (dragClone === undefined){return}
     if (dragOk){
-        if (dragTarget !== undefined){
+        if (dragTarget !== undefined && dragPrevPos !== "outside"){
             dragTarget.remove();
         } else {
             let counter = "new"+ String(newIds);
@@ -296,7 +313,16 @@ document.documentElement.addEventListener('dragend', (e) => {
         }
         console.log({dragClone, dragInto, dragPosition});
         console.log(dragClone.getAttribute("counter"), dragInto.getAttribute("counter"));
-        session.addChange(["move", dragClone.getAttribute("counter"), dragPrevEl.getAttribute("counter"), dragInto.getAttribute("counter"), {"new_pos":dragPosition, "prev_pos":dragPrevPos}], true)
+        let dragPrevCounter = undefined;
+        if (dragPrevEl !== undefined){
+            dragPrevCounter = dragPrevEl.getAttribute("counter");
+        } 
+        if (dragPrevPos === "outside"){
+            dragPrevCounter = dragPrevEl.getAttribute("blockid");
+        }
+        console.log({dragPrevCounter})
+
+        session.addChange(["move", dragClone.getAttribute("counter"), dragPrevCounter, dragInto.getAttribute("counter"), {"new_pos":dragPosition, "prev_pos":dragPrevPos}], dry)
         modifyTree(dragClone.getAttribute("counter"), dragInto.getAttribute("counter"), dragPosition);
     }
     document.documentElement.querySelectorAll(".dragged").forEach(el => {el.classList.remove("dragged")});
@@ -342,8 +368,11 @@ editorFrame.addEventListener('dragover', (e) => {
     }
 
 
-    if (e.target == dragTarget || e.target == undefined || dragTarget.contains(e.target)) {
-        //console.log("removing clone...");
+    if (e.target == dragTarget || e.target == undefined) {
+        dragClone.remove();
+        dragOk = false;
+        return 
+    } else if (dragTarget!== undefined && dragTarget.contains(e.target)){
         dragClone.remove();
         dragOk = false;
         return 
@@ -555,20 +584,42 @@ async function setupBuildBlocks(){
         let el = document.createElement("div");
         el.classList.add("editor-build-block");
         el.innerText = b[0];
+        el.setAttribute("blockid", b[0]);
         el.style.cursor = "pointer";
         el.setAttribute("draggable", "true");
-        el.addEventListener("dragstart", (e) => {
-            let wrapper = document.createElement("div");
-            wrapper.innerHTML = b[1].html;
-            dragClone = wrapper.firstElementChild;
-            wrapper.before(dragClone);
-            wrapper.remove();
-            dragClone.classList.add("drag-clone");
-            e.target.classList.add("dragged");
-        });
+        el.addEventListener("dragstart", buildBlockDragStart);
         buildBlockContainer.appendChild(el);
     });
 }
+
+function buildBlockDragStart(e){
+    console.log(e);
+    //let wrapper = document.createElement("div");
+    //wrapper.innerHTML = b[1].html;
+    //dragClone = wrapper.firstElementChild;
+    dragClone = renderBuildBlock(e.target.getAttribute("blockid"), undefined);
+    dragPrevPos = "outside";
+    dragPrevEl = e.target;
+    //wrapper.before(dragClone);
+    //wrapper.remove();
+    dragClone.classList.add("drag-clone");
+    e.target.classList.add("dragged");
+}
+
+function renderBuildBlock(blockId, counter){
+    console.log("Rendering build block")
+    console.log({blockId});
+    let blockData = buildBlocks[blockId];
+    console.log({blockData});
+    let wrapper = document.createElement("div");
+    wrapper.innerHTML = blockData["html"];
+    let element = wrapper.firstElementChild;
+    element.setAttribute("counter", counter)
+    element.classList.add(counter)
+    wrapper.before(element);
+    wrapper.remove()
+    return element
+}   
 
 function storeData(key, value){
     sessionStorage.setItem(key, value);
