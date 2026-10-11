@@ -9,6 +9,8 @@ let dragPrevEl = undefined;
 let dragPrevPos = undefined;
 let dragOk = false;
 
+let textEditPrev = undefined;
+
 let editorFrame = document.querySelector("#editor-frame");
 let buildBlockContainer = document.querySelector("#editor-build-blocks");
 let newIds = 1;
@@ -59,18 +61,22 @@ class Change {
             return
         }
         console.log("Applying change: "+this.repr()+`(revert=${revert} dry=${dry})`);
+        if (dry){
+            return
+        }
         if (this.type === "move"){
-            this._applyMove(revert, dry);
+            this._applyMove(revert);
+        } else if (this.type === "text"){
+            this._applyText(revert);
+        } else {
+            console.warn(`Change type (${this.type}) not implemented`);
         }
 
     }
 
-    _applyMove(revert=false, dry=false){
-        console.log(`Applying move... (revert=${revert} dry=${dry})`);
-        if (dry){
-            return
-        }
-
+    _applyMove(revert=false){
+        console.log(`Applying move... (revert=${revert})`);
+        
         let target = this.target;
         let to = undefined;
         let from = undefined;
@@ -116,7 +122,17 @@ class Change {
         }
         modifyTree(target, to, pos);
 
+    }
 
+    _applyText(revert=false){
+        let targetEl = this._selectElement(this.target);
+        let newText = undefined;
+        if (revert){
+            newText = this.from;
+        } else{
+            newText = this.to;
+        }
+        targetEl.innerText = newText;
     }
 }
 
@@ -224,7 +240,7 @@ class Session {
         }
         console.log(change);
         if (this.storageAvailable()){
-            this.n += 1;
+            this.n = this.i+1;
             this.update_i();
             let key = "change_"+String(this.i);
             console.log("Storing change:", key, this.i);
@@ -305,7 +321,11 @@ document.documentElement.addEventListener('dragend', (e) => {
         if (dragTarget !== undefined && dragPrevPos !== "outside"){
             dragTarget.remove();
         } else {
-            let counter = "new"+ String(newIds);
+            let prefix = "new"
+            if (dragPrevPos === "outside"){
+                prefix = dragPrevEl.getAttribute("blockid");
+            }
+            let counter = prefix + String(newIds);
             console.log("Setting counter to:", counter);
             dragClone.setAttribute("counter", counter);
             dragClone.classList.add(counter);
@@ -434,32 +454,52 @@ editorFrame.addEventListener('dragover', (e) => {
 function selectClosestElement(event){
 
     target = event.target;
-    prevTarget = document.querySelectorAll(".selected").forEach(e => {
+    document.querySelectorAll(".selected").forEach(e => {
         e.classList.remove("selected");
-        e.setAttribute("draggable", "")
+        e.setAttribute("draggable", "");
+        e.setAttribute("contenteditable", "");
+        e.removeEventListener("focusout", editText);
+    });
+    document.querySelectorAll(".menu-selected").forEach(e => {
+        e.classList.remove("menu-selected");
     });
     if (editorFrame == target){
-        console.log("Unselecting all...")
+        console.log("Unselecting all...");
         return false
     }
-    console.log("Selecting element...")
-    console.log(event.target)
+    console.log("Selecting element...");
+    console.log(event.target);
 
     target.classList.add("selected");
-    target.setAttribute("draggable", "true")
+    target.setAttribute("draggable", "true");
     let id = target.getAttribute("counter");
 
     let menuItem = document.querySelector("#editor-tree").querySelector("#"+id);
-    menuItem.classList.add("selected");
-    menuItem.scrollIntoView()
+    menuItem.classList.add("menu-selected");
+    menuItem.scrollIntoView();
+    console.log(target.tagName.toLowerCase());
+    if (target.tagName.toLowerCase() === "p"){
+        target.setAttribute("contenteditable", "true");
+        target.focus();
+        textEditPrev = target.innerText;
+        console.log("adding event listener");
+        target.addEventListener("focusout", editText);
+    }
 
     return target
 }
 
+function editText(e){
+    console.log(e.target);
+    console.log(e.target.innerText !== textEditPrev, e.target.innerText, textEditPrev);
+    if (e.target.innerText !== textEditPrev){
+        session.addChange(new Change("text", e.target.getAttribute("counter"), textEditPrev, e.target.innerText))
+    }
+}
 
 function setTreeElement(k){
     //console.log(k, t);
-    console.log("Building tree element")
+    console.log("Building tree element");
     el = document.createElement("div");
     el.id = k;
     el.classList="editor-tree-item";
@@ -471,7 +511,7 @@ function setTreeElement(k){
     el.appendChild(title);
     
     el.addEventListener("mouseover", (e) => {
-        if (e.target.classList.contains("selected") || e.target.parentElement.classList.contains("selected")){return}; 
+        if (e.target.classList.contains("menu-selected") || e.target.parentElement.classList.contains("menu-selected")){return}; 
         e.target.style.backgroundColor = 'antiquewhite';
         let t=undefined;if(e.target.id===undefined||e.target.id===""){t=e.target.parentElement}else{t=e.target};let tId=t.id; let tEl=document.documentElement.querySelector("."+String(tId));
         tEl.style.boxShadow = "inset 0px 0px 0px 1px orange"; // Maybe needs -webkit and -moz variants

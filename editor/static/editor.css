@@ -48,7 +48,7 @@ body{
     scrollbar-width: thin;
     scrollbar-color: grey transparent;
 }
-.editor-tree-item.selected{
+.menu-selected{
     font-weight: bold;
     background-color: whitesmoke;
 }
@@ -77,10 +77,6 @@ body{
 }
 
 
-.selected:not(.editor-tree-item){
-    box-shadow: inset 0px 0px 0px 3px orange !important;
-    cursor: pointer;
-}
 
 .drag-clone{
     background-color: orange !important;
@@ -99,8 +95,12 @@ body{
 .drag-into{
     border: cyan solid 3px !important; 
 }
+.selected{
+    box-shadow: inset 0px 0px 0px 3px orange !important;
+    cursor: pointer;
+}
 
-.selected:not(.editor-tree-item).editor-striped{
+.selected.editor-striped{
     background: repeating-linear-gradient(
         45deg,
         transparent ,

@@ -20,5 +20,12 @@
             "height": "100%",
             "background-color": "cyan"
         }
+    },
+    "text": {
+        "type": "p",
+        "style": {
+            "display": "block"
+        },
+        "content": "Text"
     }
 }
