@@ -1,10 +1,11 @@
  
-import {editorFrame} from "./editor-frame.js"
+import {editorFrame, escapeAll} from "./editor-frame.js"
 import {renderBuildBlock} from "./editor-blocks.js"
 import {modifyTree} from "./editor-tree.js"
 
 export class Change {
-    constructor(type, target, from, to, data={}){
+    constructor(session, type, target, from, to, data={}){
+        this.session = session
         this.type = type;
         this.target = target;
         this.from = from;
@@ -53,6 +54,8 @@ export class Change {
             this._applyMove(revert);
         } else if (this.type === "text"){
             this._applyText(revert);
+        } else if (this.type === "remove"){
+            this._applyRemove(revert);
         } else {
             console.warn(`Change type (${this.type}) not implemented`);
         }
@@ -119,6 +122,20 @@ export class Change {
         }
         targetEl.innerText = newText;
     }
+
+
+    _applyRemove(revert=false){
+        let targetEl = this._selectElement(this.target);
+        if(revert){
+            targetEl.classList.remove("removed");
+            modifyTree(this.target, "unremove");
+        }  else {
+            targetEl.classList.add("removed");
+            modifyTree(this.target, "remove");
+            escapeAll()
+        }
+        
+    }
 }
 
 
@@ -131,6 +148,8 @@ export class Change {
         this.changes = {};
         this.loadChanges();
         this.applyChanges();
+        this.revertingTo = undefined;
+
     }
     storageAvailable() {
         try {
@@ -153,6 +172,16 @@ export class Change {
         console.log(`Current i=${this.i} (n=${this.n})`)
     }
 
+    revertTo(targetI){
+        console.warn("Reverting to", targetI)
+        this.revertingTo = targetI;
+        while (this.i > 0){
+            this.revertLastChange()
+        }
+        console.warn("Reverted to starting point")
+        this.applyChanges(targetI)
+    }
+
     loadChanges(){
         console.log("Loading stored changes...");
         
@@ -165,7 +194,7 @@ export class Change {
                     break
                 }
                 let data = JSON.parse(v)
-                this.changes[this.n] = new Change(data.type, data.target, data.from, data.to, data.data)
+                this.changes[this.n] = new Change(this, data.type, data.target, data.from, data.to, data.data)
                 this.n += 1
             } catch (e) {
                 console.error(e);
@@ -178,14 +207,16 @@ export class Change {
         
     }
 
-    applyChanges(){
+    applyChanges(i=undefined){
         console.log("Applying loaded changes...");
-        let i = this.storage.getItem("i");
+        if (i == undefined){
+            i = this.storage.getItem("i");
+        }
         if (i === null){
             i = 0;
         }
         i = Number(i)
-        console.log("Saved i", i)
+        console.log("Target i", i)
         while (this.i < i){
             this.update_i()
             console.log(this.i , i);

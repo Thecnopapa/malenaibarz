@@ -32,6 +32,7 @@ body{
 }
 
 #editor-frame{
+    position:relative;
     border: black solid 1px;
     width:97%;
     height:88%;
@@ -108,4 +109,25 @@ body{
         salmon 30px,
         salmon 40px 
     );
+}
+
+.context-menu{
+    position: absolute;
+    min-height: 10px;
+    background-color: ghostwhite;
+    min-width: 50px;
+    padding: 5px;
+    cursor: default;
+}
+
+.context-menu-button{
+    min-height:10px;
+    min-width: 10px;
+    background-color: lightgrey;
+    border: black solid 1px;
+    cursor: pointer;
+}
+
+.removed{
+    display: none !important;
 }

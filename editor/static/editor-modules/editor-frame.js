@@ -6,6 +6,9 @@ import {modifyTree} from "./editor-tree.js";
 import {Change} from "./editor-session.js";
 import {session} from "../editor.js";
 
+export let currentlySelected = undefined;
+let contextMenu = undefined;
+
 let dragPosition = undefined;
 let dragInto = undefined;
 let dragTarget = undefined;
@@ -14,24 +17,45 @@ let dragPrevEl = undefined;
 let dragPrevPos = undefined;
 let dragOk = false;
 
-let textEditPrev = undefined;
+export let textEditPrev = undefined;
 
-function selectClosestElement(event){
+
+export function escapeAll(){
+    editorFrame.click();
+}
+
+export function selectClosestElement(event){
 
     let target = event.target;
-    document.querySelectorAll(".selected").forEach(e => {
-        e.classList.remove("selected");
-        e.removeAttribute("draggable");
-        e.removeAttribute("contenteditable");
-        e.removeEventListener("focusout", editText);
-    });
-    document.querySelectorAll(".menu-selected").forEach(e => {
-        e.classList.remove("menu-selected");
-    });
-    if (editorFrame == target){
-        console.log("Unselecting all...");
+    if (target.classList.contains("context-menu") || (contextMenu && contextMenu.contains(target))){
+        console.log("Clicked context menu");
         return false
     }
+    if (contextMenu && ! contextMenu.contains(target)){
+        console.log("Clicked outside context menu");
+        document.querySelectorAll(".context-menu").forEach(el => {el.remove()});
+        contextMenu = undefined;
+        return false
+    }
+    if (target !== currentlySelected){
+        document.querySelectorAll(".selected").forEach(e => {
+            e.classList.remove("selected");
+            e.removeAttribute("draggable");
+            e.removeAttribute("contenteditable");
+            e.removeEventListener("focusout", editText);
+            
+        });
+        document.querySelectorAll(".menu-selected").forEach(e => {
+            e.classList.remove("menu-selected");
+        });
+    }
+    
+    if (editorFrame == target){
+        console.log("Unselecting all...");
+        currentlySelected = undefined
+        return false
+    }
+
     console.log("Selecting element...");
     console.log(event.target);
 
@@ -42,15 +66,17 @@ function selectClosestElement(event){
     let menuItem = document.querySelector("#editor-tree").querySelector("#"+id);
     menuItem.classList.add("menu-selected");
     menuItem.scrollIntoView();
-    console.log(target.tagName.toLowerCase());
-    if (target.tagName.toLowerCase() === "p"){
+    //console.log(target.tagName.toLowerCase());
+    if (target.tagName.toLowerCase() === "p" && target === currentlySelected){
         target.setAttribute("contenteditable", "true");
         target.focus();
-        textEditPrev = target.innerText;
+        if (textEditPrev === undefined) {
+            textEditPrev = target.innerText;
+        }
         console.log("adding event listener");
         target.addEventListener("focusout", editText);
     }
-
+    currentlySelected = target
     return target
 }
 
@@ -58,30 +84,158 @@ function editText(e){
     console.log(e.target);
     console.log(e.target.innerText !== textEditPrev, e.target.innerText, textEditPrev);
     if (e.target.innerText !== textEditPrev){
-        session.addChange(new Change("text", e.target.getAttribute("counter"), textEditPrev, e.target.innerText))
+        session.addChange(new Change(session, "text", e.target.getAttribute("counter"), textEditPrev, e.target.innerText))
+        textEditPrev = undefined;
     }
+    
 }
+
+editorFrame.addEventListener("mouseleave", () => {
+    return
+    document.querySelectorAll(".context-menu").forEach(el => {el.remove()});
+    contextMenu = undefined;
+}, {"passive": false});
 
 
 editorFrame.addEventListener('click', (e) => {
-
-    e.preventDefault();
-    e.stopPropagation();
-    selectClosestElement(e);
+    if (selectClosestElement(e)){
+        e.preventDefault();
+        e.stopPropagation();
+    }
 }, {"passive":false, "capture":true});
 
 editorFrame.addEventListener('contextmenu', (e) => {
     console.log("Showing context menu...")
     e.preventDefault();
     e.stopPropagation();
-    showContext(e);
+    showEditorContext(e);
 }, {"passive":false, "capture":true});
 
-function showContext(event){
-  if (selectClosestElement(event)){
-    console.log(event.target)
-  }
+function showEditorContext(event){
+    if (selectClosestElement(event)){
+        console.log(event.target);
+        console.log("Opening editor menu");
+        let menu = new ContextMenu(event, editorFrame);
+        menu.render();
+    }
 }
+
+
+class ContextButton {
+    constructor(menu, actionName="action", actionText="actionName", icon=undefined){
+        this.menu = menu;
+        this.target = this.menu.target;
+        this.actionName = actionName;
+        this.actionText = actionText;
+        this.icon = icon;
+        this.setDefaults()
+    }
+    setDefaults(){
+
+    }
+
+    build(){
+        let el = document.createElement("div");
+        el.classList.add("context-menu-button")
+        el.classList.add(this.actionName);
+        el.addEventListener("click", this.runAction);
+        if (this.icon === undefined){
+            el.innerText = this.actionText;
+        } else {
+            el.style.backround = `url(${icon})`
+        }
+        return el
+    }
+    runAction(){
+        console.log("Button action not configured!")
+    }
+}
+
+class BoldButton extends ContextButton {
+    setDefaults(){
+        this.actionName = "bold";
+        this.actionText = "Bold"
+    }
+    runAction(){
+        console.log(currentlySelected)
+        if (currentlySelected.style.fontWeight === "bold"){
+            currentlySelected.style.fontWeight = "";
+        } else {
+            currentlySelected.style.fontWeight = "bold";
+        }
+    }
+}
+class DeleteButton extends ContextButton {
+    setDefaults(){
+        this.actionName = "delete";
+        this.actionText = "Delete"
+    }
+    runAction(){
+        console.log(currentlySelected)
+        removeElement(currentlySelected)
+    }
+}
+
+function removeElement(element){
+    session.addChange(new Change(session, "remove", element.getAttribute("counter")))
+}
+class ContextMenu {
+    constructor(event, parent){
+        if (parent === undefined){
+            parent = document.documentElement;
+        }
+        this.parent = parent
+        console.log(event);
+        this.target = event.target;
+        this.tag = this.target.tagName.toLowerCase();
+        this.el = document.createElement("div");
+        this.el.id = "context-menu";
+        this.el.classList.add("context-menu");
+        this.el.classList.add("editor-context-menu");
+        this.el.style.top = event.layerY;
+        this.el.style.left = event.layerX;
+        
+    }
+
+    addButton(button){
+        console.log("adding button")
+        this.el.appendChild(button.build()) 
+    }
+
+    addButtons(){
+        this.addButton(new DeleteButton(this))
+        if (this.tag === "p"){
+            this.addButton(new BoldButton(this));
+            this.addButton(new ContextButton(this, "test", "Test Action"));
+        }
+    }
+
+    render(){
+        document.querySelectorAll(".context-menu").forEach(el => {el.remove()});
+        this.addButtons()
+        this.parent.appendChild(this.el);
+        this.target.blur();
+        this.el.focus();
+        contextMenu = this.el
+        
+    }
+
+}
+
+function buildEditorContext(event, parent=undefined){
+    
+
+    
+
+
+
+    parent.appendChild(menuEl);
+    return menuEl
+
+}
+
+
+
 
 
 export function buildBlockDragStart(e){
@@ -106,7 +260,7 @@ editorFrame.addEventListener('dragstart', (e) => {
     let clone = target.cloneNode(true);
     dragClone = clone;
     dragTarget = target;
-    console.log("prev el", target.nextElementSibling);
+    //console.log("prev el", target.nextElementSibling);
     if (target.nextElementSibling === null){
         dragPrevEl = target.parentElement;
         dragPrevPos = "inside";
@@ -114,7 +268,7 @@ editorFrame.addEventListener('dragstart', (e) => {
         dragPrevEl = target.nextElementSibling;
         dragPrevPos = "before";
     }
-    console.log({dragPrevEl, dragPrevPos})
+    //console.log({dragPrevEl, dragPrevPos})
     
 
     clone.classList.add("drag-clone");
@@ -153,8 +307,10 @@ document.documentElement.addEventListener('dragend', (e) => {
         }
         console.log({dragPrevCounter})
 
-        session.addChange(["move", dragClone.getAttribute("counter"), dragPrevCounter, dragInto.getAttribute("counter"), {"new_pos":dragPosition, "prev_pos":dragPrevPos}], dry)
+        session.addChange([session, "move", dragClone.getAttribute("counter"), dragPrevCounter, dragInto.getAttribute("counter"), {"new_pos":dragPosition, "prev_pos":dragPrevPos}], dry)
         modifyTree(dragClone.getAttribute("counter"), dragInto.getAttribute("counter"), dragPosition);
+    } else{
+        dragClone.remove()
     }
     document.documentElement.querySelectorAll(".dragged").forEach(el => {el.classList.remove("dragged")});
     document.documentElement.querySelectorAll(".drag-clone").forEach(el => {el.classList.remove("drag-clone")});

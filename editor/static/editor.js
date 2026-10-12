@@ -1,10 +1,31 @@
 
 let CONTROL_PRESSED = false;
+import {setupBuildBlocks} from "./editor-modules/editor-blocks.js";  
+import {buildTree} from "./editor-modules/editor-tree.js";  
+import {Session} from "./editor-modules/editor-session.js";  
+import {editorFrame, selectClosestElement, currentlySelected, textEditPrev, escapeAll} from "./editor-modules/editor-frame.js";  
+
 
 
 
 
 document.documentElement.addEventListener('keydown', (e) => {
+    //console.log(e.key)
+    if (e.key === 'Escape') {
+        console.log("ESCAPE");
+        escapeAll()
+        return
+    }
+    if (e.key === 'Delete') {
+        console.log("Delete");
+        console.log(currentlySelected, textEditPrev);
+        if (currentlySelected !== undefined && textEditPrev === undefined){
+            session.addChange([session, "remove", currentlySelected.getAttribute("counter")]);
+        }
+        escapeAll()
+        return
+    }
+
     if (e.key === 'Control') {
         CONTROL_PRESSED = true;
         console.log("Control pressed:", CONTROL_PRESSED);
@@ -30,15 +51,7 @@ document.documentElement.addEventListener('keyup', (e) => {
 
 });
 
-//import {editorFrame} from "./editor-modules/editor-frame.js";  
-import {setupBuildBlocks} from "./editor-modules/editor-blocks.js";  
-import {buildTree} from "./editor-modules/editor-tree.js";  
-import {Session} from "./editor-modules/editor-session.js";  
 
-window.addEventListener("load", (e)=>{
-    
-    
-})
 setupBuildBlocks();
 buildTree();
 export let session = new Session();

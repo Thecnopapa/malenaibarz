@@ -14,20 +14,21 @@
     },
     "elements": [
         {
-            "type":"div",
-            "name": "div1",
+            "type":"p",
+            "name": "text1",
             "class": "test-div aaa",
             "content": "Hello",
             "elements": [
                 {
                     "type": "b",
+                    "name": "bold1",
                     "content": "World"
                 }
             ]
         },
         {
-            "type": "div",
-            "name": "div1",
+            "type": "p",
+            "name": "text2",
             "class": "test-div2 aaa",
             "content": "oooo",
             "style": {

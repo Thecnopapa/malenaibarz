@@ -25,12 +25,20 @@ export function buildTree(treelement=undefined, tree=undefined, depth=0){
 export function modifyTree(movingId, targetId, position){
     
     let treeElement = document.querySelector("#editor-tree");
+    let el = treeElement.querySelector("#"+movingId);
+    if (targetId === "remove"){
+        el.classList.add("removed");
+        return
+    } else if(targetId === "unremove"){
+        el.classList.remove("removed");
+        return
+    }
     if (targetId === "frame"){
         targetId = treeElement.lastElementChild.id;
         position = "after";
     }
     console.log({movingId, targetId, position})
-    let el = treeElement.querySelector("#"+movingId);
+    
     if (el === undefined || el === null){
         el = setTreeElement(movingId);
     }
@@ -86,6 +94,8 @@ function setTreeElement(k){
         }
 
     }, {passive:false});
+
+
 
     el.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
