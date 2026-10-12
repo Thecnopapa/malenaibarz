@@ -117,12 +117,12 @@ class Templates(object):
         return json.dumps(self.elements, indent=indent)
     
 class Layout(object):
-    def __init__(self, element):
+    def __init__(self, element, page):
         self.element = element
         self.elements = {}
         self.structure = {}
         self.counter = 0
-        self.element.counter = f"e{self.counter}"
+        self.element.counter = page
         self.structure = {self.element.counter:{}}
         self._tree = [self.element.counter]
 
@@ -214,10 +214,13 @@ class Element(object):
             elif i.endswith(".js"):
                 html += indent+f'<script defer type="text/javascript" src="/static/{i}"></script>\n'
         t = self.type
+        classlist = self.classlist
         if editor and self.type == "body":
             t = "div"
-
-        classlist = self.classlist
+            classlist += " root-page"
+            #self.counter="root"
+            self.id="editor-root"
+        
 
         if editor and self.invisible:
             classlist += " editor-striped"
@@ -241,7 +244,7 @@ class Page(object):
         self.data = json.load(open(os.path.join(data_folder, page_id+".page.json")))
         self.id = page_id
 
-        self.layout = Layout(Element(self.data))
+        self.layout = Layout(Element(self.data), self.id)
 
     def __getattr__(self, attr):
         return self.data.get(attr, None)

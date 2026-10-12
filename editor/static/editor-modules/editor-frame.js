@@ -1,4 +1,5 @@
 export let editorFrame = document.querySelector("#editor-frame");
+export let editorRoot = document.querySelector("#editor-root");
 let newIds = 1;
 
 import {renderBuildBlock} from "./editor-blocks.js";
@@ -60,7 +61,9 @@ export function selectClosestElement(event){
     console.log(event.target);
 
     target.classList.add("selected");
-    target.setAttribute("draggable", "true");
+    if (target !== editorRoot){
+        target.setAttribute("draggable", "true");
+    }
     let id = target.getAttribute("counter");
 
     let menuItem = document.querySelector("#editor-tree").querySelector("#"+id);
@@ -198,12 +201,15 @@ class ContextMenu {
     }
 
     addButton(button){
-        console.log("adding button")
-        this.el.appendChild(button.build()) 
+        console.log("Adding button");
+        this.el.appendChild(button.build()) ;
     }
 
     addButtons(){
-        this.addButton(new DeleteButton(this))
+        if (this.target !== editorRoot){
+            this.addButton(new DeleteButton(this));
+        }
+        
         if (this.tag === "p"){
             this.addButton(new BoldButton(this));
             this.addButton(new ContextButton(this, "test", "Test Action"));
@@ -381,7 +387,7 @@ editorFrame.addEventListener('dragover', (e) => {
         if (e.target == editorFrame ){
             editorFrame.appendChild(dragClone)
             dragPosition = "inside";
-            dragInto = e.target;
+            dragInto = editorRoot;
             dragOk = true;
         } else if (pos === "before"){
             //console.log("clone before");

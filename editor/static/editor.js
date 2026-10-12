@@ -3,7 +3,7 @@ let CONTROL_PRESSED = false;
 import {setupBuildBlocks} from "./editor-modules/editor-blocks.js";  
 import {buildTree} from "./editor-modules/editor-tree.js";  
 import {Session} from "./editor-modules/editor-session.js";  
-import {editorFrame, selectClosestElement, currentlySelected, textEditPrev, escapeAll} from "./editor-modules/editor-frame.js";  
+import {editorFrame, editorRoot, selectClosestElement, currentlySelected, textEditPrev, escapeAll} from "./editor-modules/editor-frame.js";  
 
 
 
@@ -20,9 +20,14 @@ document.documentElement.addEventListener('keydown', (e) => {
         console.log("Delete");
         console.log(currentlySelected, textEditPrev);
         if (currentlySelected !== undefined && textEditPrev === undefined){
-            session.addChange([session, "remove", currentlySelected.getAttribute("counter")]);
+            if (currentlySelected !== editorRoot){
+                session.addChange([session, "remove", currentlySelected.getAttribute("counter")]);
+                escapeAll()
+            } else{
+                console.warn("Can't delete root element!")
+            }
         }
-        escapeAll()
+        
         return
     }
 
